@@ -4,7 +4,7 @@ from flask import Flask
 app = Flask(__name__)
 
 
-# curl -i http://localhost:5000/
+# curl -i http://localhost:3000/
 @app.route('/', methods=['GET'])
 def index():
     return "Web App"
