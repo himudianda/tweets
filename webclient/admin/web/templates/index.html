@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset=utf-8 />
+<title>Tweet Filtering</title>
+<meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+<script src='https://api.mapbox.com/mapbox.js/v2.2.2/mapbox.js'></script>
+<link href='https://api.mapbox.com/mapbox.js/v2.2.2/mapbox.css' rel='stylesheet' />
+<style>
+  body { margin:0; padding:0; }
+  #map { position:absolute; top:0; bottom:0; width:100%; }
+</style>
+</head>
+<body>
+<style>
+.position-search-ui {
+  position:absolute;
+  top:10px;
+  right:10px;
+  z-index:1000;
+  }
+.tweet-search-ui {
+  position:absolute;
+  top:40px;
+  right:10px;
+  :400px;
+  z-index:1000;
+  }
+
+pre.ui-coordinates {
+  background:rgba(0,0,0,0.5);
+  position:absolute;
+  bottom:10px;
+  left:10px;
+  padding:5px 10px;
+  color:#fff;
+  font-size:11px;
+  line-height:18px;
+  border-radius:3px;
+  max-height:1000px;
+  overflow:auto;
+  width:400px;
+  }
+
+</style>
+
+<!-- jQuery is required for this example. -->
+<script src='https://code.jquery.com/jquery-1.11.0.min.js'></script>
+
+<div id='map'></div>
+<div class='position-search-ui'>
+  <input type="number" id='lat_search' placeholder='Enter lat' />
+  <input type="number" id='lng_search' placeholder='Enter lng' />
+  <input type="number" id='radius_search' placeholder='Enter radius (in km)' />
+</div>
+<div class='tweet-search-ui'>
+  <input id='tweet_search' placeholder='Enter hashtag' />
+</div>
+<pre id='coordinates' class='ui-coordinates'></pre>
+
+<script>
+
+L.mapbox.accessToken = "{{ mapbox_accessToken }}";
+var map = L.mapbox.map('map', 'mapbox.streets')
+    .setView([40, -95], 4);
+
+var myLayer = L.mapbox.featureLayer().addTo(map);
+
+$('#lat_search, #lng_search, #radius_search, #tweet_search').keyup(loc_search);
+function loc_search() {
+    var lat = $('#lat_search').val();
+    var lng = $('#lng_search').val();
+    var radius = $('#radius_search').val();
+    var searchString = $('#tweet_search').val();
+
+    if (lat == "" || lng === "" || radius == "") {
+      return;
+    }
+
+    if (searchString == "") {
+      var data = JSON.stringify({lat:lat, lng:lng, radius:radius});
+    } else {
+      var data = JSON.stringify({lat:lat, lng:lng, radius:radius, hashtag:searchString});
+    }
+
+    $.ajax({
+        url: '/tweets/api/v1.0/coordinates',
+        type: 'post',
+        contentType: "application/json; charset=utf-8",
+        dataType: 'json',
+        success: function (response) {
+          // Show tweets on map
+          myLayer.setGeoJSON(response.data);
+
+          // List tweets
+          var inBounds = [];
+          index = 0
+          myLayer.eachLayer(function(marker){
+            index++;
+            inBounds.push(index + ": " + marker.feature.properties.created_at + ' - ' + marker.options.title)
+          });
+          document.getElementById('coordinates').innerHTML = inBounds.join('\n');
+
+          // Automatically adjust map bounds
+          map.fitBounds(myLayer.getBounds());
+        },
+        data: data
+    });
+}
+
+</script>
+</body>
+</html>
